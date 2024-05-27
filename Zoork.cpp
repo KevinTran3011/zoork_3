@@ -4,9 +4,10 @@
 #include <map>
 #include <memory>
 
-// Forward declarations to resolve dependencies   
+// Forward declarations to resolve dependencies
 class Room;
 class Command;
+class Enemy;
 
 // Command.h
 class Command
@@ -278,6 +279,35 @@ public:
     Item(const std::string &n, const std::string &d) : GameObject(n, d) {}
 };
 
+// Enemy.h
+class Enemy
+{
+private:
+    int health;
+    int damage;
+
+public:
+    Enemy() : health(5), damage(5) {}
+    Enemy(int h, int d) : health(h), damage(d) {}
+
+    int getHealth() const
+    {
+        return health;
+    }
+
+    void takeDamage(int damage)
+    {
+        health -= damage;
+        if (health < 0)
+            health = 0;
+    }
+
+    int getDamage() const
+    {
+        return damage;
+    }
+};
+
 // Player.h
 class Player : public Observer
 {
@@ -344,10 +374,8 @@ public:
 
     void attack(Enemy *enemy)
     {
-        if (equippedWeapon)
-        {
-            enemy->takeDamage(equippedWeapon->getDamage());
-        }
+        enemy->takeDamage(equippedWeapon->getDamage());
+        std::cout << "You attacked the enemy with " << equippedWeapon->getDescription() << " dealing " << equippedWeapon->getDamage() << " damage." << std::endl;
     }
 
     Weapon *getEquippedWeapon() const
@@ -363,35 +391,6 @@ public:
     void resetXP()
     {
         xp = 0;
-    }
-};
-
-// Enemy.h
-class Enemy
-{
-private:
-    int health;
-    int damage;
-
-public:
-Enemy() : health(5), damage(5) {}
-    Enemy(int h, int d) : health(h), damage(d) {}
-
-    int getHealth() const
-    {
-        return health;
-    }
-
-    void takeDamage(int damage)
-    {
-        health -= damage;
-        if (health < 0)
-            health = 0;
-    }
-
-    int getDamage() const
-    {
-        return damage;
     }
 };
 
@@ -586,7 +585,6 @@ void ZOOrkEngine::handleTakeCommand(const std::string &arguments)
     std::cout << "Item not found." << std::endl;
 }
 
-
 void ZOOrkEngine::handleDropCommand(const std::string &arguments)
 {
     // Implementation to move an item from the player's inventory to the room
@@ -616,9 +614,9 @@ void ZOOrkEngine::movePlayer(const std::string &direction)
     }
 }
 
-void ZOOrkEngine:: handlePlayerAttack(){
-    enemy.takeDamage(player.getEquippedWeapon()->getDamage());
-
+void ZOOrkEngine::handlePlayerAttack()
+{
+    player.attack(&enemy); // Use the Player's attack method
 }
 
 void ZOOrkEngine::handleEnemyAttack()
@@ -678,7 +676,7 @@ public:
         }
         else if (command == "attack")
         {
-            engine-> handlePlayerAttack();
+            engine->handlePlayerAttack();
             engine->handleEnemyAttack();
         }
         else
