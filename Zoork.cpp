@@ -3,11 +3,13 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <algorithm>
 
 // Forward declarations to resolve dependencies
 class Room;
 class Command;
 class Enemy;
+class Player;
 
 // Command.h
 class Command
@@ -77,7 +79,7 @@ public:
         items.push_back(item);
     }
 
-    std::vector<GameObject *> getItems() const
+    std::vector<GameObject *> &getItems()
     {
         return items;
     }
@@ -197,18 +199,47 @@ public:
     virtual void update() = 0;
 };
 
-// Weapon.h
-class Weapon
+// Item.h
+class Item : public GameObject
 {
 public:
+    enum ItemType
+    {
+        WEAPON,
+        POTION
+    };
+
+private:
+    ItemType type;
+
+public:
+    Item(const std::string &n, const std::string &d, ItemType t) : GameObject(n, d), type(t) {}
+
+    ItemType getType() const
+    {
+        return type;
+    }
+
+    virtual void use(Player &player) = 0;
+};
+
+// Weapon.h
+class Weapon : public Item
+{
+public:
+    Weapon(const std::string &n, const std::string &d) : Item(n, d, Item::WEAPON) {}
     virtual ~Weapon() {}
+
     virtual std::string getDescription() const = 0;
     virtual int getDamage() const = 0;
+
+    void use(Player &player) override;
 };
 
 class Sword : public Weapon
 {
 public:
+    Sword() : Weapon("Sword", "A sharp blade.") {}
     std::string getDescription() const override
     {
         return "Sword";
@@ -222,6 +253,7 @@ public:
 class Bow : public Weapon
 {
 public:
+    Bow() : Weapon("Bow", "A ranged weapon.") {}
     std::string getDescription() const override
     {
         return "Bow";
@@ -235,6 +267,7 @@ public:
 class Dagger : public Weapon
 {
 public:
+    Dagger() : Weapon("Dagger", "A small but deadly weapon.") {}
     std::string getDescription() const override
     {
         return "Dagger";
@@ -251,7 +284,7 @@ protected:
     Weapon *wrappedWeapon;
 
 public:
-    WeaponDecorator(Weapon *weapon) : wrappedWeapon(weapon) {}
+    WeaponDecorator(Weapon *weapon) : Weapon(weapon->getName(), weapon->getDescription()), wrappedWeapon(weapon) {}
     virtual ~WeaponDecorator()
     {
         delete wrappedWeapon;
@@ -272,11 +305,21 @@ public:
     }
 };
 
-// Item.h
-class Item : public GameObject
+// HealthPotion.h
+class HealthPotion : public Item
 {
+private:
+    int healingAmount;
+
 public:
-    Item(const std::string &n, const std::string &d) : GameObject(n, d) {}
+    HealthPotion(const std::string &n, const std::string &d, int h) : Item(n, d, Item::POTION), healingAmount(h) {}
+
+    int getHealingAmount() const
+    {
+        return healingAmount;
+    }
+
+    void use(Player &player) override;
 };
 
 // Enemy.h
@@ -321,78 +364,119 @@ private:
 public:
     Player() : level(1), health(100), xp(0), equippedWeapon(nullptr) {}
 
-    void gainXP(int amount)
-    {
-        xp += amount;
-        if (xp >= 10)
-        {
-            levelUp();
-        }
-    }
+    void gainXP(int amount);
+    void levelUp();
+    void update() override;
+    void equipWeapon(Weapon *weapon);
+    void addItem(Item *item);
+    void removeItem(Item *item);
+    int getLevel() const;
+    int getHealth() const;
+    void takeDamage(int damage);
+    void heal(int amount);
+    void attack(Enemy *enemy);
+    Weapon *getEquippedWeapon() const;
+    std::vector<Item *> &getInventory();
+    void resetXP();
+};
 
-    void levelUp()
+// Player.cpp
+void Player::gainXP(int amount)
+{
+    xp += amount;
+    if (xp >= 10)
     {
-        level++;
-        xp = 0;
-        update();
+        levelUp();
     }
+}
 
-    void update() override
+void Player::levelUp()
+{
+    level++;
+    xp = 0;
+    update();
+}
+
+void Player::update()
+{
+    if (level >= 5 && equippedWeapon)
     {
-        if (level >= 5 && equippedWeapon)
-        {
-            equippedWeapon = new AwakenedWeapon(equippedWeapon);
-        }
+        equippedWeapon = new AwakenedWeapon(equippedWeapon);
     }
+}
 
-    void equipWeapon(Weapon *weapon)
+void Player::equipWeapon(Weapon *weapon)
+{
+    equippedWeapon = weapon;
+}
+
+void Player::addItem(Item *item)
+{
+    inventory.push_back(item);
+}
+
+void Player::removeItem(Item *item)
+{
+    auto it = std::find(inventory.begin(), inventory.end(), item);
+    if (it != inventory.end())
     {
-        equippedWeapon = weapon;
+        inventory.erase(it);
     }
+}
 
-    void addItem(Item *item)
+void Player::heal(int amount)
+{
+    health += amount;
+    if (health > 100)
     {
-        inventory.push_back(item);
+        health = 100;
     }
+}
 
-    int getLevel() const
-    {
-        return level;
-    }
+int Player::getLevel() const
+{
+    return level;
+}
 
-    int getHealth() const
-    {
-        return health;
-    }
+int Player::getHealth() const
+{
+    return health;
+}
 
-    void takeDamage(int damage)
-    {
-        health -= damage;
-        if (health < 0)
-            health = 0;
-    }
+void Player::takeDamage(int damage)
+{
+    health -= damage;
+    if (health < 0)
+        health = 0;
+}
 
-    void attack(Enemy *enemy)
+void Player::attack(Enemy *enemy)
+{
+    if (equippedWeapon)
     {
         enemy->takeDamage(equippedWeapon->getDamage());
         std::cout << "You attacked the enemy with " << equippedWeapon->getDescription() << " dealing " << equippedWeapon->getDamage() << " damage." << std::endl;
     }
-
-    Weapon *getEquippedWeapon() const
+    else
     {
-        return equippedWeapon;
+        std::cout << "You have no weapon equipped!" << std::endl;
     }
+}
 
-    std::vector<Item *> &getInventory()
-    {
-        return inventory;
-    }
+Weapon *Player::getEquippedWeapon() const
+{
+    return equippedWeapon;
+}
 
-    void resetXP()
-    {
-        xp = 0;
-    }
-};
+std::vector<Item *> &Player::getInventory()
+{
+    return inventory;
+}
+
+void Player::resetXP()
+{
+    xp = 0;
+}
 
 // Boss.h
 class Boss
@@ -424,7 +508,7 @@ public:
             {
                 // Player wins and receives the god slayer blade
                 Weapon *godSlayer = new Sword(); // Replace with actual god slayer blade implementation
-                player.addItem(new Item("God Slayer", "A blade capable of one-shotting any enemy."));
+                player.addItem(godSlayer);
                 player.equipWeapon(godSlayer);
             }
         }
@@ -463,7 +547,9 @@ public:
     void handleLookCommand(const std::string &arguments);
     void handleTakeCommand(const std::string &arguments);
     void handleDropCommand(const std::string &arguments);
+    void handleUseCommand(const std::string &arguments);
     void movePlayer(const std::string &direction);
+    void handleCheckInventoryCommand();
     void handleEnemyAttack();
     void handlePlayerAttack();
     Room *getCurrentRoom() const
@@ -497,6 +583,7 @@ void ZOOrkEngine::initializeGame()
     mainHallway->setExit("south", entrance);
     mainHallway->setExit("west", enemyRoom1);
     mainHallway->setExit("east", arsenal);
+    arsenal->setExit("west", mainHallway);
     mainHallway->setExit("north", enemyRoom2);
     enemyRoom2->setExit("south", mainHallway);
     enemyRoom2->setExit("north", passage);
@@ -529,13 +616,11 @@ void ZOOrkEngine::initializeGame()
     currentRoom = entrance;
 
     // Initialize player
-    Weapon *sword = new Sword();
-    Weapon *bow = new Bow();
-    Weapon *dagger = new Dagger();
-    player.addItem(new Item("Sword", "A sharp blade."));
-    player.addItem(new Item("Bow", "A ranged weapon."));
-    player.addItem(new Item("Dagger", "A small but deadly weapon."));
-    player.equipWeapon(sword);
+    player.addItem(new Sword());
+    player.addItem(new Bow());
+    player.addItem(new Dagger());
+    player.addItem(new HealthPotion("Health Potion", "Restores 20 health.", 20));
+    player.equipWeapon(static_cast<Weapon *>(player.getInventory()[0]));
 }
 
 void ZOOrkEngine::handleLookCommand(const std::string &arguments)
@@ -571,13 +656,13 @@ void ZOOrkEngine::handleLookCommand(const std::string &arguments)
 
 void ZOOrkEngine::handleTakeCommand(const std::string &arguments)
 {
-    // Implementation to move an item from the room to the player's inventory
-    for (auto it = currentRoom->getItems().begin(); it != currentRoom->getItems().end(); ++it)
+    auto &items = currentRoom->getItems(); // Get a reference to the items vector
+    for (auto it = items.begin(); it != items.end(); ++it)
     {
-        if ((*it)->getDescription() == arguments)
+        if ((*it)->getName() == arguments)
         {
             player.addItem(static_cast<Item *>(*it));
-            currentRoom->getItems().erase(it);
+            items.erase(it);
             std::cout << "You have taken the " << arguments << "." << std::endl;
             return;
         }
@@ -587,18 +672,44 @@ void ZOOrkEngine::handleTakeCommand(const std::string &arguments)
 
 void ZOOrkEngine::handleDropCommand(const std::string &arguments)
 {
-    // Implementation to move an item from the player's inventory to the room
-    for (auto it = player.getInventory().begin(); it != player.getInventory().end(); ++it)
+    auto &inventory = player.getInventory(); // Get a reference to the inventory vector
+    for (auto it = inventory.begin(); it != inventory.end(); ++it)
     {
-        if ((*it)->getDescription() == arguments)
+        if ((*it)->getName() == arguments)
         {
             currentRoom->addItem(*it);
-            player.getInventory().erase(it);
+            inventory.erase(it);
             std::cout << "You have dropped the " << arguments << "." << std::endl;
             return;
         }
     }
     std::cout << "Item not found." << std::endl;
+}
+
+void ZOOrkEngine::handleCheckInventoryCommand()
+{
+    std::cout << "Inventory: ";
+    for (auto item : player.getInventory())
+    {
+        std::cout << item->getName() << " ";
+    }
+    std::cout << std::endl;
+}
+
+void ZOOrkEngine::handleUseCommand(const std::string &arguments)
+{
+    auto &inventory = player.getInventory(); // Get a reference to the inventory vector
+    for (auto it = inventory.begin(); it != inventory.end(); ++it)
+    {
+        if ((*it)->getName() == arguments)
+        {
+            (*it)->use(player);
+            player.removeItem(*it);
+            delete *it; // Ensure to delete the item to prevent memory leaks
+            return;
+        }
+    }
+    std::cout << "Item not found or cannot be used." << std::endl;
 }
 
 void ZOOrkEngine::movePlayer(const std::string &direction)
@@ -611,12 +722,31 @@ void ZOOrkEngine::movePlayer(const std::string &direction)
     else
     {
         currentRoom = nextRoom;
+        currentRoom->enter();
     }
 }
 
 void ZOOrkEngine::handlePlayerAttack()
 {
-    player.attack(&enemy); // Use the Player's attack method
+    if (player.getEquippedWeapon())
+    {
+        player.attack(&enemy);
+        enemy.takeDamage(player.getEquippedWeapon()->getDamage());
+        if (enemy.getHealth() <= 0)
+        {
+            std::cout << "You have defeated the enemy!" << std::endl;
+            player.gainXP(5);
+            std::cout << "You gained 5 XP. You now have " << player.getLevel() << " level." << std::endl;
+        }
+        else
+        {
+            handleEnemyAttack();
+        }
+    }
+    else
+    {
+        std::cout << "You have no weapon equipped!" << std::endl;
+    }
 }
 
 void ZOOrkEngine::handleEnemyAttack()
@@ -653,49 +783,62 @@ public:
         engine->initializeGame();
     }
 
-    void processCommand(const std::string &command)
-    {
-        if (command == "look")
-        {
-            engine->handleLookCommand("");
-        }
-        else if (command.find("go ") == 0)
-        {
-            std::string direction = command.substr(3);
-            engine->movePlayer(direction);
-        }
-        else if (command.find("take ") == 0)
-        {
-            std::string item = command.substr(5);
-            engine->handleTakeCommand(item);
-        }
-        else if (command.find("drop ") == 0)
-        {
-            std::string item = command.substr(5);
-            engine->handleDropCommand(item);
-        }
-        else if (command == "attack")
-        {
-            engine->handlePlayerAttack();
-            engine->handleEnemyAttack();
-        }
-        else
-        {
-            std::cout << "I don't understand that command." << std::endl;
-        }
-    }
-
-    bool isGameOver()
-    {
-        return engine->isGameOver();
-    }
-
-    void displayCurrentRoom()
-    {
-        std::cout << "You are in " << engine->getCurrentRoom()->getDescription() << std::endl;
-        std::cout << engine->getCurrentRoom()->getExitString() << std::endl;
-    }
+    void processCommand(const std::string &command);
+    bool isGameOver();
+    void displayCurrentRoom();
 };
+
+// GameFacade.cpp
+void GameFacade::processCommand(const std::string &command)
+{
+    if (command == "look")
+    {
+        engine->handleLookCommand("");
+    }
+    else if (command.find("go ") == 0)
+    {
+        std::string direction = command.substr(3);
+        engine->movePlayer(direction);
+    }
+    else if (command.find("take ") == 0)
+    {
+        std::string item = command.substr(5);
+        engine->handleTakeCommand(item);
+    }
+    else if (command.find("drop ") == 0)
+    {
+        std::string item = command.substr(5);
+        engine->handleDropCommand(item);
+    }
+    else if (command == "attack")
+    {
+        engine->handlePlayerAttack();
+    }
+    else if (command.find("use ") == 0)
+    {
+        std::string item = command.substr(4);
+        engine->handleUseCommand(item);
+    }
+    else if (command == "check inventory")
+    {
+        engine->handleCheckInventoryCommand();
+    }
+    else
+    {
+        std::cout << "I don't understand that command." << std::endl;
+    }
+}
+
+bool GameFacade::isGameOver()
+{
+    return engine->isGameOver();
+}
+
+void GameFacade::displayCurrentRoom()
+{
+    std::cout << "You are in " << engine->getCurrentRoom()->getDescription() << std::endl;
+    std::cout << engine->getCurrentRoom()->getExitString() << std::endl;
+}
 
 // Main.cpp
 int main()
@@ -703,7 +846,6 @@ int main()
     GameFacade game;
     game.startGame();
 
-    // Game loop
     std::string command;
     while (!game.isGameOver())
     {
@@ -727,4 +869,17 @@ int main()
     }
 
     return 0;
+}
+
+// Implementations for methods declared but not defined in header files
+void Weapon::use(Player &player)
+{
+    player.equipWeapon(this);
+    std::cout << "You equipped the " << getDescription() << "." << std::endl;
+}
+
+void HealthPotion::use(Player &player)
+{
+    player.heal(healingAmount);
+    std::cout << "You used a " << getDescription() << " and restored " << healingAmount << " health." << std::endl;
 }
