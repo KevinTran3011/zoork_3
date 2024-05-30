@@ -612,6 +612,11 @@ void ZOOrkEngine::initializeGame()
     rooms.push_back(dungeon);
     rooms.push_back(hiddenBossRoom);
 
+    // add weapons to the arsenal
+    arsenal->addItem(new Sword());
+    arsenal->addItem(new Bow());
+    library->addItem(new HealthPotion("HEalth Potion", "Restores 20 health.", 20));
+
     // Set current room to entrance
     currentRoom = entrance;
 
