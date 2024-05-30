@@ -736,6 +736,15 @@ void ZOOrkEngine::handleUseCommand(const std::string &arguments)
 void ZOOrkEngine::handlePlayerBlock(){
     player.block();
     player.takeDamage(enemy.getDamage() * 0.7);
+    std::cout << "You blocked the enemy attack and took " << enemy.getDamage() * 0.7 << " damage." << std::endl;
+    if (player.getHealth() <= 0)
+    {
+        std::cout << "Game Over! You have been defeated." << std::endl;
+        gameOver = true;
+    }
+    else{
+        std::cout << "Your health is now " << player.getHealth() << "." << std::endl;
+    }
 }
 
 void ZOOrkEngine::movePlayer(const std::string &direction)
