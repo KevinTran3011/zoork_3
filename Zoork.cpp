@@ -427,6 +427,15 @@ void Player::removeItem(Item *item)
 }
 
 void Player::block(){
+    if(blocking){
+        blocking = false;
+    } else {
+        blocking = true;
+        std::cout << "You are blocking" << std::endl;
+        blocking = false;
+    }
+
+
     
 }
 
@@ -820,6 +829,9 @@ void GameFacade::processCommand(const std::string &command)
     {
         std::string item = command.substr(5);
         engine->handleDropCommand(item);
+    }
+    else if(command == "block"){
+        
     }
     else if (command == "attack")
     {
