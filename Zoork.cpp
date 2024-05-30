@@ -358,11 +358,12 @@ private:
     int level;
     int health;
     int xp;
+    bool blocking ;
     std::vector<Item *> inventory;
     Weapon *equippedWeapon;
 
 public:
-    Player() : level(1), health(100), xp(0), equippedWeapon(nullptr) {}
+    Player() : level(1), health(100), xp(0), blocking(false), equippedWeapon(nullptr) {}
 
     void gainXP(int amount);
     void levelUp();
@@ -374,6 +375,7 @@ public:
     int getHealth() const;
     void takeDamage(int damage);
     void heal(int amount);
+    void block();
     void attack(Enemy *enemy);
     Weapon *getEquippedWeapon() const;
     std::vector<Item *> &getInventory();
@@ -422,6 +424,10 @@ void Player::removeItem(Item *item)
     {
         inventory.erase(it);
     }
+}
+
+void Player::block(){
+    
 }
 
 void Player::heal(int amount)
