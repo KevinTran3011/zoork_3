@@ -566,6 +566,7 @@ public:
     void movePlayer(const std::string &direction);
     void handleCheckInventoryCommand();
     void handleEnemyAttack();
+    void handlePlayerBlock();
     void handlePlayerAttack();
     Room *getCurrentRoom() const
     {
@@ -732,6 +733,11 @@ void ZOOrkEngine::handleUseCommand(const std::string &arguments)
     std::cout << "Item not found or cannot be used." << std::endl;
 }
 
+void ZOOrkEngine::handlePlayerBlock(){
+    player.block();
+    player.takeDamage(enemy.getDamage() * 0.7);
+}
+
 void ZOOrkEngine::movePlayer(const std::string &direction)
 {
     Room *nextRoom = currentRoom->getExit(direction);
@@ -831,6 +837,7 @@ void GameFacade::processCommand(const std::string &command)
         engine->handleDropCommand(item);
     }
     else if(command == "block"){
+        engine->handlePlayerBlock();
         
     }
     else if (command == "attack")
