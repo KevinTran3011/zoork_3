@@ -514,6 +514,8 @@ public:
         if (player.getLevel() < 5)
         {
             player.takeDamage(player.getHealth() - 50);
+            std::cout << "You must be at least level 5 to fight the hidden boss." << std::endl;
+            std::cout << "You took 50 damage and your health is now " << player.getHealth() << "." << std::endl;
             // Logic to teleport player to a room full of monsters can be added here
         }
         else
