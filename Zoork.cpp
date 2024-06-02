@@ -513,7 +513,7 @@ public:
     {
         if (player.getLevel() < 5)
         {
-            player.takeDamage(player.getHealth() - 1);
+            player.takeDamage(player.getHealth() - 50);
             // Logic to teleport player to a room full of monsters can be added here
         }
         else
