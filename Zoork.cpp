@@ -301,7 +301,7 @@ public:
     }
     int getDamage() const override
     {
-        return wrappedWeapon->getDamage() + 5;
+        return wrappedWeapon->getDamage() *2 ;
     }
 };
 
