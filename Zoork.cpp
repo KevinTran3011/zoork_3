@@ -646,6 +646,8 @@ void ZOOrkEngine::initializeGame()
     player.addItem(new Dagger());
     player.addItem(new HealthPotion("Health Potion", "Restores 20 health.", 20));
     player.equipWeapon(static_cast<Weapon *>(player.getInventory()[0]));
+
+    
 }
 
 void ZOOrkEngine::handleLookCommand(const std::string &arguments)
