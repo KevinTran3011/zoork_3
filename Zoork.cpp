@@ -358,7 +358,7 @@ private:
     int level;
     int health;
     int xp;
-    bool blocking ;
+    bool blocking;
     std::vector<Item *> inventory;
     Weapon *equippedWeapon;
 
@@ -426,17 +426,18 @@ void Player::removeItem(Item *item)
     }
 }
 
-void Player::block(){
-    if(blocking){
+void Player::block()
+{
+    if (blocking)
+    {
         blocking = false;
-    } else {
+    }
+    else
+    {
         blocking = true;
         std::cout << "You are blocking" << std::endl;
         blocking = false;
     }
-
-
-    
 }
 
 void Player::heal(int amount)
@@ -567,6 +568,7 @@ public:
     void handleCheckInventoryCommand();
     void handleEnemyAttack();
     void handlePlayerBlock();
+    void handlePlayerHeal();
     void handlePlayerAttack();
     Room *getCurrentRoom() const
     {
@@ -733,7 +735,8 @@ void ZOOrkEngine::handleUseCommand(const std::string &arguments)
     std::cout << "Item not found or cannot be used." << std::endl;
 }
 
-void ZOOrkEngine::handlePlayerBlock(){
+void ZOOrkEngine::handlePlayerBlock()
+{
     player.block();
     player.takeDamage(enemy.getDamage() * 0.7);
     std::cout << "You blocked the enemy attack and took " << enemy.getDamage() * 0.7 << " damage." << std::endl;
@@ -742,9 +745,24 @@ void ZOOrkEngine::handlePlayerBlock(){
         std::cout << "Game Over! You have been defeated." << std::endl;
         gameOver = true;
     }
-    else{
+    else
+    {
         std::cout << "Your health is now " << player.getHealth() << "." << std::endl;
     }
+}
+
+void ZOOrkEngine::handlePlayerHeal()
+{
+    for (auto item : player.getInventory())
+    {
+        if (item->getDescription() == "Health Potion")
+        {
+            item->use(player);
+            player.removeItem(item);
+            return;
+        }
+    }
+    std::cout << "You have no health potions!" << std::endl;
 }
 
 void ZOOrkEngine::movePlayer(const std::string &direction)
@@ -845,9 +863,9 @@ void GameFacade::processCommand(const std::string &command)
         std::string item = command.substr(5);
         engine->handleDropCommand(item);
     }
-    else if(command == "block"){
+    else if (command == "block")
+    {
         engine->handlePlayerBlock();
-        
     }
     else if (command == "attack")
     {
@@ -856,6 +874,11 @@ void GameFacade::processCommand(const std::string &command)
     else if (command.find("use ") == 0)
     {
         std::string item = command.substr(4);
+        engine->handleUseCommand(item);
+    }
+    else if (command == "heal")
+    {
+        std::string item = "Health Potion";
         engine->handleUseCommand(item);
     }
     else if (command == "check inventory")
@@ -921,4 +944,9 @@ void HealthPotion::use(Player &player)
 {
     player.heal(healingAmount);
     std::cout << "You used a " << getDescription() << " and restored " << healingAmount << " health." << std::endl;
+    std::cout << "Your health is now " << player.getHealth() << "." << std::endl;
+    if (player.getInventory().size() == 0)
+    {
+        std::cout << "You have no more health potions!" << std::endl;
+    }
 }
