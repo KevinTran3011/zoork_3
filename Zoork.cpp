@@ -10,6 +10,7 @@ class Room;
 class Command;
 class Enemy;
 class Player;
+class BossProxy;
 
 // Command.h
 class Command
@@ -529,11 +530,9 @@ public:
             player.takeDamage(player.getHealth() - 50);
             std::cout << "You must be at least level 5 to fight the hidden boss." << std::endl;
             std::cout << "You took 50 damage and your health is now " << player.getHealth() << "." << std::endl;
-            // Logic to teleport player to a room full of monsters can be added here
         }
         else
         {
-            // Fight the beast and then the hidden boss
             player.takeDamage(20); // Example damage from the beast
             if (player.getHealth() > 0)
             {
@@ -541,6 +540,7 @@ public:
                 Weapon *godSlayer = new Sword(); // Replace with actual god slayer blade implementation
                 player.addItem(godSlayer);
                 player.equipWeapon(godSlayer);
+                std::cout << "You have defeated the hidden boss and obtained the God Slayer Blade!" << std::endl;
             }
         }
     }
@@ -663,8 +663,11 @@ void ZOOrkEngine::initializeGame()
     // Add bosses
     throneRoom->addEnemy(new Enemy(30, 10)); // Boss in throne room
     updateRoomDescription(throneRoom);
-    hiddenBossRoom->addEnemy(new Enemy(50, 20)); // Hidden boss in hidden boss room
-    updateRoomDescription(hiddenBossRoom);
+
+    // Add hidden boss proxy
+    HiddenBoss *hiddenBoss = new HiddenBoss();
+    BossProxy *bossProxy = new BossProxy(hiddenBoss, player);
+    hiddenBossRoom->setEnterCommand(std::make_shared<PassageDefaultEnterCommand>(hiddenBossRoom));
 
     // Set current room to entrance
     currentRoom = entrance;
