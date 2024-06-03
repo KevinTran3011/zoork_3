@@ -314,7 +314,7 @@ public:
     }
     int getDamage() const override
     {
-        return wrappedWeapon->getDamage() *2 ;
+        return wrappedWeapon->getDamage() * 2;
     }
 };
 
@@ -518,8 +518,6 @@ public:
     virtual void fight(Player &player) = 0;
 };
 
-
-
 class HiddenBoss : public Boss
 {
 public:
@@ -572,6 +570,8 @@ private:
     Enemy enemy;
     std::vector<Room *> rooms;
     bool gameOver;
+
+    void updateRoomDescription(Room *room);
 
 public:
     ZOOrkEngine() : currentRoom(nullptr), gameOver(false) {}
@@ -654,12 +654,17 @@ void ZOOrkEngine::initializeGame()
 
     // Add enemies
     enemyRoom1->addEnemy(new Enemy(10, 3));
+    updateRoomDescription(enemyRoom1);
     enemyRoom2->addEnemy(new Enemy(10, 3));
+    updateRoomDescription(enemyRoom2);
     passage->addEnemy(new Enemy(10, 3));
+    updateRoomDescription(passage);
 
     // Add bosses
-    throneRoom->addEnemy(new Enemy(30, 10));  // Boss in throne room
-    hiddenBossRoom->addEnemy(new Enemy(50, 20));  // Hidden boss in hidden boss room
+    throneRoom->addEnemy(new Enemy(30, 10)); // Boss in throne room
+    updateRoomDescription(throneRoom);
+    hiddenBossRoom->addEnemy(new Enemy(50, 20)); // Hidden boss in hidden boss room
+    updateRoomDescription(hiddenBossRoom);
 
     // Set current room to entrance
     currentRoom = entrance;
@@ -670,6 +675,11 @@ void ZOOrkEngine::initializeGame()
     player.addItem(new Dagger());
     player.addItem(new HealthPotion("Health Potion", "Restores 20 health.", 20));
     player.equipWeapon(static_cast<Weapon *>(player.getInventory()[0]));
+}
+
+void ZOOrkEngine::updateRoomDescription(Room *room)
+{
+    room->setDescription(room->getEnemies().empty() ? "The room is filled with enemies you slayed" : "A room filled with enemies");
 }
 
 void ZOOrkEngine::handleLookCommand(const std::string &arguments)
@@ -820,6 +830,7 @@ void ZOOrkEngine::handlePlayerAttack()
     {
         std::cout << "You have defeated the enemy!" << std::endl;
         currentRoom->getEnemies().pop_back();
+        updateRoomDescription(currentRoom); // Update description after defeating the enemy
         player.gainXP(5);
         std::cout << "You gained 5 XP. You now have " << player.getLevel() << " level." << std::endl;
     }
@@ -980,11 +991,7 @@ void Weapon::use(Player &player)
 
 void HealthPotion::use(Player &player)
 {
-    player.heal(healingAmount);
-    std::cout << "You used a " << getDescription() << " and restored " << healingAmount << " health." << std::endl;
+    player.heal(getHealingAmount());
+    std::cout << "You used a " << getDescription() << " and restored " << getHealingAmount() << " health." << std::endl;
     std::cout << "Your health is now " << player.getHealth() << "." << std::endl;
-    if (player.getInventory().size() == 0)
-    {
-        std::cout << "You have no more health potions!" << std::endl;
-    }
 }
