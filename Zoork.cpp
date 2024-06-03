@@ -570,11 +570,13 @@ private:
     Enemy enemy;
     std::vector<Room *> rooms;
     bool gameOver;
+    HiddenBoss *hiddenBoss;
+    BossProxy *bossProxy;
 
     void updateRoomDescription(Room *room);
 
 public:
-    ZOOrkEngine() : currentRoom(nullptr), gameOver(false) {}
+    ZOOrkEngine() : currentRoom(nullptr), gameOver(false), hiddenBoss(nullptr), bossProxy(nullptr) {}
 
     void initializeGame();
     void handleLookCommand(const std::string &arguments);
@@ -665,9 +667,8 @@ void ZOOrkEngine::initializeGame()
     updateRoomDescription(throneRoom);
 
     // Add hidden boss proxy
-    HiddenBoss *hiddenBoss = new HiddenBoss();
-    BossProxy *bossProxy = new BossProxy(hiddenBoss, player);
-    hiddenBossRoom->setEnterCommand(std::make_shared<PassageDefaultEnterCommand>(hiddenBossRoom));
+    hiddenBoss = new HiddenBoss();
+    bossProxy = new BossProxy(hiddenBoss, player);
 
     // Set current room to entrance
     currentRoom = entrance;
@@ -813,6 +814,15 @@ void ZOOrkEngine::movePlayer(const std::string &direction)
     }
     else
     {
+        if (currentRoom->getName() == "Dungeon" && direction == "north")
+        {
+            bossProxy->fight(player);
+            if (player.getHealth() <= 0)
+            {
+                gameOver = true;
+                return;
+            }
+        }
         currentRoom = nextRoom;
         currentRoom->enter();
     }
