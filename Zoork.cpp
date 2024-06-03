@@ -103,6 +103,7 @@ class Room : public Location
 {
 private:
     std::map<std::string, Room *> exits;
+    std::vector<Enemy *> enemies;
 
 public:
     Room(const std::string &n, const std::string &d);
@@ -111,6 +112,8 @@ public:
     void setExit(const std::string &direction, Room *neighbor);
     Room *getExit(const std::string &direction);
     std::string getExitString();
+    void addEnemy(Enemy *enemy);
+    std::vector<Enemy *> &getEnemies();
 };
 
 // Room.cpp
@@ -151,6 +154,16 @@ std::string Room::getExitString()
         exitString += exit.first + " ";
     }
     return exitString;
+}
+
+void Room::addEnemy(Enemy *enemy)
+{
+    enemies.push_back(enemy);
+}
+
+std::vector<Enemy *> &Room::getEnemies()
+{
+    return enemies;
 }
 
 // Passage.h
@@ -505,6 +518,8 @@ public:
     virtual void fight(Player &player) = 0;
 };
 
+
+
 class HiddenBoss : public Boss
 {
 public:
@@ -635,7 +650,16 @@ void ZOOrkEngine::initializeGame()
     // add weapons to the arsenal
     arsenal->addItem(new Sword());
     arsenal->addItem(new Bow());
-    library->addItem(new HealthPotion("HEalth Potion", "Restores 20 health.", 20));
+    library->addItem(new HealthPotion("Health Potion", "Restores 20 health.", 20));
+
+    // Add enemies
+    enemyRoom1->addEnemy(new Enemy(10, 3));
+    enemyRoom2->addEnemy(new Enemy(10, 3));
+    passage->addEnemy(new Enemy(10, 3));
+
+    // Add bosses
+    throneRoom->addEnemy(new Enemy(30, 10));  // Boss in throne room
+    hiddenBossRoom->addEnemy(new Enemy(50, 20));  // Hidden boss in hidden boss room
 
     // Set current room to entrance
     currentRoom = entrance;
@@ -646,8 +670,6 @@ void ZOOrkEngine::initializeGame()
     player.addItem(new Dagger());
     player.addItem(new HealthPotion("Health Potion", "Restores 20 health.", 20));
     player.equipWeapon(static_cast<Weapon *>(player.getInventory()[0]));
-
-    
 }
 
 void ZOOrkEngine::handleLookCommand(const std::string &arguments)
@@ -785,36 +807,41 @@ void ZOOrkEngine::movePlayer(const std::string &direction)
 
 void ZOOrkEngine::handlePlayerAttack()
 {
-    if (player.getEquippedWeapon())
+    if (currentRoom->getEnemies().empty())
     {
-        player.attack(&enemy);
-        enemy.takeDamage(player.getEquippedWeapon()->getDamage());
-        if (enemy.getHealth() <= 0)
-        {
-            std::cout << "You have defeated the enemy!" << std::endl;
-            player.gainXP(5);
-            std::cout << "You gained 5 XP. You now have " << player.getLevel() << " level." << std::endl;
-        }
-        else
-        {
-            handleEnemyAttack();
-        }
+        std::cout << "There are no enemies in this room." << std::endl;
+        return;
+    }
+
+    Enemy *enemy = currentRoom->getEnemies().back();
+    player.attack(enemy);
+    enemy->takeDamage(player.getEquippedWeapon()->getDamage());
+    if (enemy->getHealth() <= 0)
+    {
+        std::cout << "You have defeated the enemy!" << std::endl;
+        currentRoom->getEnemies().pop_back();
+        player.gainXP(5);
+        std::cout << "You gained 5 XP. You now have " << player.getLevel() << " level." << std::endl;
     }
     else
     {
-        std::cout << "You have no weapon equipped!" << std::endl;
+        handleEnemyAttack();
     }
 }
 
 void ZOOrkEngine::handleEnemyAttack()
 {
-    player.takeDamage(enemy.getDamage());
-    std::cout << "You were hit by an enemy! Your health is now " << player.getHealth() << "." << std::endl;
-
-    if (player.getHealth() <= 0)
+    if (!currentRoom->getEnemies().empty())
     {
-        std::cout << "Game Over! You have been defeated." << std::endl;
-        gameOver = true;
+        Enemy *enemy = currentRoom->getEnemies().back();
+        player.takeDamage(enemy->getDamage());
+        std::cout << "You were hit by an enemy! Your health is now " << player.getHealth() << "." << std::endl;
+
+        if (player.getHealth() <= 0)
+        {
+            std::cout << "Game Over! You have been defeated." << std::endl;
+            gameOver = true;
+        }
     }
 }
 
@@ -892,6 +919,13 @@ void GameFacade::processCommand(const std::string &command)
     else
     {
         std::cout << "I don't understand that command." << std::endl;
+        return;
+    }
+
+    // Enemy attacks after player action, except for checking inventory
+    if (command != "check inventory" && !engine->isGameOver())
+    {
+        engine->handleEnemyAttack();
     }
 }
 
