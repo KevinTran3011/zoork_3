@@ -822,6 +822,11 @@ void ZOOrkEngine::movePlayer(const std::string &direction)
                 gameOver = true;
                 return;
             }
+            if (player.getLevel() < 5)
+            {
+                std::cout << "You are not high enough level to enter the hidden boss room. You remain in the dungeon." << std::endl;
+                return;
+            }
         }
         currentRoom = nextRoom;
         currentRoom->enter();
