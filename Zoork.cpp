@@ -568,6 +568,12 @@ protected:
 public:
     virtual ~Boss() {}
     virtual void fight(Player &player) = 0;
+    virtual void takeDamage(int damage)
+    {
+        health -= damage;
+        if (health < 0)
+            health = 0;
+    }
 };
 
 class HiddenBoss : public Boss
@@ -584,7 +590,7 @@ public:
         }
         else
         {
-            player.takeDamage(20); // Example damage from the beast
+            player.takeDamage(10); // Example damage from the beast
             if (player.getHealth() > 0)
             {
                 // Player wins and receives the god slayer blade
@@ -630,7 +636,7 @@ public:
             std::cout << "The final boss has healed itself and is now in berserk mode!" << std::endl;
         }
 
-        player.takeDamage(30);
+        player.takeDamage(15);
         std::cout << "The final boss attacks you, and you take 30 damage. Your health is now " << player.getHealth() << "." << std::endl;
 
         if (player.getHealth() <= 0)
@@ -668,6 +674,11 @@ public:
         {
             fBoss->fight(player);
         }
+    }
+
+    void takeDamage(int damage)
+    {
+        fBoss->takeDamage(damage);
     }
 };
 
@@ -788,9 +799,9 @@ void ZOOrkEngine::initializeGame()
     passage->addEnemy(new Enemy(10, 3));
     updateRoomDescription(passage);
 
-    // Add bosses
-    throneRoom->addEnemy(new Enemy(50, 10)); // Boss in throne room
-    updateRoomDescription(throneRoom);
+    // // Add bosses
+    // throneRoom->addEnemy(new Enemy(50, 10)); // Boss in throne room
+    // updateRoomDescription(throneRoom);
 
     // Add hidden boss proxy
     hiddenBoss = new HiddenBoss();
@@ -807,7 +818,6 @@ void ZOOrkEngine::initializeGame()
     player.addItem(new Sword());
     player.addItem(new Bow());
     player.addItem(new Dagger());
-    player.addItem(new HealthPotion("Health Potion", "Restores 20 health.", 20));
     player.equipWeapon(static_cast<Weapon *>(player.getInventory()[0]));
 }
 
@@ -1019,6 +1029,14 @@ void ZOOrkEngine::handlePlayerAttack()
     if (currentRoom->getName() == "Throne Room")
     {
         finalBossProxy->fight(player);
+        if (player.getEquippedWeapon() != nullptr) // Check if the player has an equipped weapon
+        {
+            finalBossProxy->takeDamage(player.getEquippedWeapon()->getDamage());
+        }
+        else
+        {
+            std::cout << "You have no weapon equipped!" << std::endl;
+        }
         if (player.getHealth() <= 0)
         {
             gameOver = true;
@@ -1051,7 +1069,10 @@ void ZOOrkEngine::handlePlayerAttack()
     }
     else
     {
-        handleEnemyAttack();
+        if (currentRoom->getName() != "Throne Room")
+        {
+            handleEnemyAttack();
+        }
     }
 }
 
