@@ -597,9 +597,10 @@ class FinalBoss : public Boss
 {
 private:
     bool hasHealed;
+    bool isDefeated;
 
 public:
-    FinalBoss() : hasHealed(false) { health = 100; }
+    FinalBoss() : hasHealed(false), isDefeated(false) { health = 100; }
 
     void fight(Player &player) override
     {
@@ -619,8 +620,13 @@ public:
         }
         else if (health <= 0)
         {
-            std::cout << "Congratulations! You have defeated the final boss!" << std::endl;
+            isDefeated = true;
         }
+    }
+
+    bool isDefeatedByPlayer() const
+    {
+        return isDefeated;
     }
 };
 
@@ -961,15 +967,38 @@ void ZOOrkEngine::movePlayer(const std::string &direction)
                     gameOver = true;
                     return;
                 }
+                else if (finalBoss->isDefeatedByPlayer())
+                {
+                    std::cout << "Congratulations! You have defeated the final boss!" << std::endl;
+                    std::cout << "You win!" << std::endl;
+                    gameOver = true;
+                    return;
+                }
             }
         }
         currentRoom = nextRoom;
         currentRoom->enter();
     }
 }
-
+// ZOOrkEngine.cpp (modified handlePlayerAttack function)
 void ZOOrkEngine::handlePlayerAttack()
 {
+    if (currentRoom->getName() == "Throne Room")
+    {
+        finalBossProxy->fight(player);
+        if (player.getHealth() <= 0)
+        {
+            gameOver = true;
+        }
+        else if (finalBoss->isDefeatedByPlayer())
+        {
+            std::cout << "Congratulations! You have defeated the final boss!" << std::endl;
+            std::cout << "You win!" << std::endl;
+            gameOver = true;
+        }
+        return;
+    }
+
     if (currentRoom->getEnemies().empty())
     {
         std::cout << "There are no enemies in this room." << std::endl;
