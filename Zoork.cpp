@@ -661,6 +661,7 @@ private:
     FinalBossProxy *finalBossProxy;
 
     void updateRoomDescription(Room *room);
+    void printRoomItems(Room *room); // New method declaration
 
 public:
     ZOOrkEngine() : currentRoom(nullptr), gameOver(false), hiddenBoss(nullptr), bossProxy(nullptr), finalBoss(nullptr), finalBossProxy(nullptr) {}
@@ -709,6 +710,7 @@ void ZOOrkEngine::initializeGame()
     mainHallway->setExit("east", arsenal);
     arsenal->setExit("west", mainHallway);
     mainHallway->setExit("north", enemyRoom2);
+    enemyRoom1->setExit("east", mainHallway);
     enemyRoom2->setExit("south", mainHallway);
     enemyRoom2->setExit("north", passage);
     passage->setExit("south", enemyRoom2);
@@ -783,11 +785,30 @@ void ZOOrkEngine::updateRoomDescription(Room *room)
     room->setDescription(room->getEnemies().empty() ? "The room is filled with enemies you slayed" : "A room filled with enemies");
 }
 
+void ZOOrkEngine::printRoomItems(Room *room)
+{
+    const auto &items = room->getItems();
+    if (items.empty())
+    {
+        std::cout << "There are no items in this room." << std::endl;
+    }
+    else
+    {
+        std::cout << "Items in this room: ";
+        for (const auto &item : items)
+        {
+            std::cout << item->getName() << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
 void ZOOrkEngine::handleLookCommand(const std::string &arguments)
 {
     if (arguments.empty())
     {
         std::cout << currentRoom->getDescription() << std::endl;
+        printRoomItems(currentRoom); // Print items in the room
     }
     else
     {
