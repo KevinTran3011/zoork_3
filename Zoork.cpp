@@ -4,6 +4,8 @@
 #include <map>
 #include <memory>
 #include <algorithm>
+#include <ctime>
+#include <cstdlib>
 
 // Forward declarations to resolve dependencies
 class Room;
@@ -239,11 +241,16 @@ public:
 };
 
 // Key.h
-
 class Key : public Item
 {
 public:
     Key(const std::string &n, const std::string &d) : Item(n, d, Item::KEY) {}
+
+    void use(Player &player) override
+    {
+        std::cout << "You used the " << getDescription() << "." << std::endl;
+        // Implementation for using the key (if needed)
+    }
 };
 
 // Weapon.h
@@ -382,11 +389,12 @@ private:
     int health;
     int xp;
     bool blocking;
+    bool hasKey;
     std::vector<Item *> inventory;
     Weapon *equippedWeapon;
 
 public:
-    Player() : level(1), health(100), xp(0), blocking(false), equippedWeapon(nullptr) {}
+    Player() : level(1), health(100), xp(0), blocking(false), hasKey(false), equippedWeapon(nullptr) {}
 
     void gainXP(int amount);
     void levelUp();
@@ -399,6 +407,7 @@ public:
     void takeDamage(int damage);
     void heal(int amount);
     void block();
+    bool checkKey();
     void attack(Enemy *enemy);
     Weapon *getEquippedWeapon() const;
     std::vector<Item *> &getInventory();
@@ -413,6 +422,20 @@ void Player::gainXP(int amount)
     {
         levelUp();
     }
+}
+
+bool Player::checkKey()
+{
+    for (auto item : inventory)
+    {
+        if (item->getType() == Item::KEY)
+        {
+            hasKey = true;
+            return true;
+        }
+    }
+    hasKey = false;
+    return false;
 }
 
 void Player::levelUp()
@@ -570,6 +593,59 @@ public:
     }
 };
 
+class FinalBoss : public Boss
+{
+private:
+    bool hasHealed;
+
+public:
+    FinalBoss() : hasHealed(false) { health = 100; }
+
+    void fight(Player &player) override
+    {
+        if (health <= 50 && !hasHealed)
+        {
+            health = 100;
+            hasHealed = true;
+            std::cout << "The final boss has healed itself and is now in berserk mode!" << std::endl;
+        }
+
+        player.takeDamage(30);
+        std::cout << "The final boss attacks you, and you take 30 damage. Your health is now " << player.getHealth() << "." << std::endl;
+
+        if (player.getHealth() <= 0)
+        {
+            std::cout << "Game Over! You have been defeated by the final boss." << std::endl;
+        }
+        else if (health <= 0)
+        {
+            std::cout << "Congratulations! You have defeated the final boss!" << std::endl;
+        }
+    }
+};
+
+class FinalBossProxy : public Boss
+{
+private:
+    FinalBoss *fBoss;
+    Player &player;
+
+public:
+    FinalBossProxy(FinalBoss *boss, Player &player) : fBoss(boss), player(player) {}
+
+    void fight(Player &player) override
+    {
+        if (!player.checkKey())
+        {
+            std::cout << "You need the key to enter the final boss room." << std::endl;
+        }
+        else
+        {
+            fBoss->fight(player);
+        }
+    }
+};
+
 // ZOOrkEngine.h
 class ZOOrkEngine
 {
@@ -581,11 +657,13 @@ private:
     bool gameOver;
     HiddenBoss *hiddenBoss;
     BossProxy *bossProxy;
+    FinalBoss *finalBoss;
+    FinalBossProxy *finalBossProxy;
 
     void updateRoomDescription(Room *room);
 
 public:
-    ZOOrkEngine() : currentRoom(nullptr), gameOver(false), hiddenBoss(nullptr), bossProxy(nullptr) {}
+    ZOOrkEngine() : currentRoom(nullptr), gameOver(false), hiddenBoss(nullptr), bossProxy(nullptr), finalBoss(nullptr), finalBossProxy(nullptr) {}
 
     void initializeGame();
     void handleLookCommand(const std::string &arguments);
@@ -663,27 +741,31 @@ void ZOOrkEngine::initializeGame()
     arsenal->addItem(new Bow());
     library->addItem(new HealthPotion("Health Potion", "Restores 20 health.", 20));
 
+    // Randomly place the key in a room (excluding hiddenBossRoom and throneRoom)
+    std::srand(std::time(nullptr));
+    std::vector<Room *> validRooms = {entrance, mainHallway, enemyRoom1, arsenal, enemyRoom2, passage, library, cathedral, dungeon};
+    int randomIndex = std::rand() % validRooms.size();
+    validRooms[randomIndex]->addItem(new Key("Dungeon Key", "A key to the dungeon."));
+
     // Add enemies
     enemyRoom1->addEnemy(new Enemy(10, 3));
     updateRoomDescription(enemyRoom1);
     enemyRoom2->addEnemy(new Enemy(10, 3));
-    enemyRoom2->addEnemy(new Enemy(10, 3));
-
-    enemyRoom2->addEnemy(new Enemy(10, 3));
-
-    enemyRoom2->addEnemy(new Enemy(10, 3));
-
     updateRoomDescription(enemyRoom2);
     passage->addEnemy(new Enemy(10, 3));
     updateRoomDescription(passage);
 
     // Add bosses
-    throneRoom->addEnemy(new Enemy(30, 10)); // Boss in throne room
+    throneRoom->addEnemy(new Enemy(50, 10)); // Boss in throne room
     updateRoomDescription(throneRoom);
 
     // Add hidden boss proxy
     hiddenBoss = new HiddenBoss();
     bossProxy = new BossProxy(hiddenBoss, player);
+
+    // Add final boss
+    finalBoss = new FinalBoss();
+    finalBossProxy = new FinalBossProxy(finalBoss, player);
 
     // Set current room to entrance
     currentRoom = entrance;
@@ -841,6 +923,23 @@ void ZOOrkEngine::movePlayer(const std::string &direction)
             {
                 std::cout << "You are not high enough level to enter the hidden boss room. You remain in the dungeon." << std::endl;
                 return;
+            }
+        }
+        if (currentRoom->getName() == "Cathedral" && direction == "north")
+        {
+            if (!player.checkKey())
+            {
+                std::cout << "You need the key to enter the throne room." << std::endl;
+                return;
+            }
+            else
+            {
+                finalBossProxy->fight(player);
+                if (player.getHealth() <= 0)
+                {
+                    gameOver = true;
+                    return;
+                }
             }
         }
         currentRoom = nextRoom;
