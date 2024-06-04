@@ -335,6 +335,25 @@ public:
     }
 };
 
+// GodSlayerBlade.h
+
+class GodSlayerBlade : public Weapon
+{
+public:
+    GodSlayerBlade() : Weapon("God Slayer Blade", "A legendary weapon that can slay gods.")
+    {
+    }
+
+    std::string getDescription() const override
+    {
+        return "God Slayer Blade";
+    }
+    int getDamage() const override
+    {
+        return 100;
+    }
+};
+
 // HealthPotion.h
 class HealthPotion : public Item
 {
@@ -569,7 +588,7 @@ public:
             if (player.getHealth() > 0)
             {
                 // Player wins and receives the god slayer blade
-                Weapon *godSlayer = new Sword(); // Replace with actual god slayer blade implementation
+                Weapon *godSlayer = new GodSlayerBlade(); // Replace with actual god slayer blade implementation
                 player.addItem(godSlayer);
                 player.equipWeapon(godSlayer);
                 std::cout << "You have defeated the hidden boss and obtained the God Slayer Blade!" << std::endl;
@@ -757,8 +776,14 @@ void ZOOrkEngine::initializeGame()
 
     // Add enemies
     enemyRoom1->addEnemy(new Enemy(10, 3));
+    enemyRoom1->addEnemy(new Enemy(10, 3));
+
+    enemyRoom1->addEnemy(new Enemy(10, 3));
+
     updateRoomDescription(enemyRoom1);
     enemyRoom2->addEnemy(new Enemy(10, 3));
+    enemyRoom2->addEnemy(new Enemy(10, 3));
+
     updateRoomDescription(enemyRoom2);
     passage->addEnemy(new Enemy(10, 3));
     updateRoomDescription(passage);
@@ -891,8 +916,11 @@ void ZOOrkEngine::handleUseCommand(const std::string &arguments)
         if ((*it)->getName() == arguments)
         {
             (*it)->use(player);
-            player.removeItem(*it);
-            delete *it; // Ensure to delete the item to prevent memory leaks
+            if ((*it)->getType() == Item::POTION)
+            {
+                inventory.erase(it);
+                delete *it;
+            }
             return;
         }
     }
@@ -917,16 +945,21 @@ void ZOOrkEngine::handlePlayerBlock()
 
 void ZOOrkEngine::handlePlayerHeal()
 {
-    for (auto item : player.getInventory())
+    auto &inventory = player.getInventory();
+    auto it = std::find_if(inventory.begin(), inventory.end(), [](Item *item)
+                           { return item->getType() == Item::POTION; });
+
+    if (it != inventory.end())
     {
-        if (item->getDescription() == "Health Potion")
-        {
-            item->use(player);
-            player.removeItem(item);
-            return;
-        }
+        HealthPotion *potion = static_cast<HealthPotion *>(*it);
+        potion->use(player);
+        inventory.erase(it);
+        delete potion;
     }
-    std::cout << "You have no health potions!" << std::endl;
+    else
+    {
+        std::cout << "You have no health potions!" << std::endl;
+    }
 }
 
 void ZOOrkEngine::movePlayer(const std::string &direction)
