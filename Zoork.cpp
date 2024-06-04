@@ -220,7 +220,8 @@ public:
     enum ItemType
     {
         WEAPON,
-        POTION
+        POTION,
+        KEY
     };
 
 private:
@@ -235,6 +236,14 @@ public:
     }
 
     virtual void use(Player &player) = 0;
+};
+
+// Key.h
+
+class Key : public Item
+{
+public:
+    Key(const std::string &n, const std::string &d) : Item(n, d, Item::KEY) {}
 };
 
 // Weapon.h
