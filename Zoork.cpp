@@ -658,6 +658,12 @@ void ZOOrkEngine::initializeGame()
     enemyRoom1->addEnemy(new Enemy(10, 3));
     updateRoomDescription(enemyRoom1);
     enemyRoom2->addEnemy(new Enemy(10, 3));
+    enemyRoom2->addEnemy(new Enemy(10, 3));
+
+    enemyRoom2->addEnemy(new Enemy(10, 3));
+
+    enemyRoom2->addEnemy(new Enemy(10, 3));
+
     updateRoomDescription(enemyRoom2);
     passage->addEnemy(new Enemy(10, 3));
     updateRoomDescription(passage);
@@ -849,8 +855,8 @@ void ZOOrkEngine::handlePlayerAttack()
         std::cout << "You have defeated the enemy!" << std::endl;
         currentRoom->getEnemies().pop_back();
         updateRoomDescription(currentRoom); // Update description after defeating the enemy
-        player.gainXP(5);
-        std::cout << "You gained 5 XP. You now have " << player.getLevel() << " level." << std::endl;
+        player.gainXP(10);
+        std::cout << "You gained 10 XP. You now have " << player.getLevel() << " level." << std::endl;
     }
     else
     {
